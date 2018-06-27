@@ -1,0 +1,223 @@
+create a directory in hdfs an put all data sets in directory
+
+create a table in habase and column family on table change table name 
+
+we have to transfer data to hbase table  using pig
+
+use hive  analysis  using 10 complex query 
+
+
+
+#####################################################################################################################
+for create directory on hdfs system 
+
+hadoop fs -mkdir /user/biadmin
+
+for checking data in hdfs 
+
+hadoop fs -ls
+
+
+for transfer data in linux to hdfs system
+*******************************************************************************************************************
+
+hadoop fs -put #path  #toDest
+hadoop fs -put /home/biadmin/data_set /user/biadmin
+
+
+for hbase table created and table name
+*********************************************************************************************************************
+cd $HBASE_HOME/bin
+./hbase shell
+
+
+create 'custmer360_amit',{NAME=>'demographics'},{NAME=>'savings'},{NAME=>'loan'},{NAME=>'credit'},{NAME=>'deposit'},{NAME=>'credittrxsummary'}
+
+list 'custmer360.*'
+describe 'custmer360_amit'
+
+
+
+transfer data to hbase table using pig from hdfs
+***********************************************************************************************************************
+cd $PIG_HOME/bin
+./pig
+
+111111111111111111111111111111111111111111111111111111111111
+DEMOGRAPHICS
+111111111111111111111111111111111111111111111111111111111111
+demographics = LOAD '/user/biadmin/data_set/demographics.csv' USING PigStorage(',') as (customerid:chararray,registrationdate:chararray, age:int,gender:chararray,occupation:chararray,income:chararray);
+  
+
+demographics = FOREACH demographics GENERATE customerid,registrationdate,age,gender,occupation,income;
+
+describe demographics;
+illustrate demographics;
+
+
+
+
+STORE demographics INTO 'hbase://custmer360_amit' USING org.apache.pig.backend.hadoop.hbase.HBaseStorage(
+'demographics:registrationdate 
+ demographics:age 
+ demographics:gender
+ demographics:occupation
+ demographics:income' 
+);
+
+
+HABSE-----
+get 'custmer360_amit','CID-509008'
+scan 'custmer360_amit',{LIMIT=>10} 
+2222222222222222222222222222222222222222222222222222222222
+CREDITCARD
+2222222222222222222222222222222222222222222222222222222222
+creditcard = LOAD '/user/biadmin/data_set/creditcard.csv' USING PigStorage(',') as 
+(customerid:chararray, cardnumber:chararray, type:chararray, limit:chararray);
+
+describe creditcard;
+illustrate creditcard;
+
+
+STORE creditcard INTO 'hbase://custmer360_amit' USING org.apache.pig.backend.hadoop.hbase.HBaseStorage(
+'credit:cardnumber 
+ credit:type
+ credit:amountlimit'
+); 
+
+HBASE____
+get 'custmer360_amit','CID-433047'
+scan 'custmer360_amit',{LIMIT=>10} 
+
+33333333333333333333333333333333333333333333333333333333
+deposit account
+33333333333333333333333333333333333333333333333333333333
+
+depositaccount = LOAD '/user/biadmin/data_set/depositaccount.csv' USING PigStorage(',') as (customerid:chararray, type:chararray,tenure:chararray);
+describe depositaccount;
+illustrate depositaccount;
+
+STORE depositaccount INTO 'hbase://custmer360_amit' USING org.apache.pig.backend.hadoop.hbase.HBaseStorage(
+'deposit:type
+ deposit:tenure'
+);
+
+HBASE____
+get 'custmer360_amit','CID-61906'
+scan 'custmer360_amit',{LIMIT=>10} 
+44444444444444444444444444444444444444444444444444444444
+loanaccount
+44444444444444444444444444444444444444444444444444444444
+loanaccount = LOAD '/user/biadmin/data_set/loanaccount.csv' USING PigStorage(',') as (customerid:chararray, loanid:chararray,type:chararray, santionedamount:chararray,tenure:chararray);
+
+describe loanaccount;
+illustrate loanaccount;
+
+STORE loanaccount INTO 'hbase://custmer360_amit' USING org.apache.pig.backend.hadoop.hbase.HBaseStorage(
+'loan:loanid 
+ loan:type
+ loan:santionedamount
+ loan:tenure'
+);
+
+HBASE____
+get 'custmer360_amit','CID-124718'
+scan 'custmer360_amit',{LIMIT=>10} 
+55555555555555555555555555555555555555555555555555555555555
+SAVING ACCOUNT
+55555555555555555555555555555555555555555555555555555555555
+
+savingsaccount = LOAD '/user/biadmin/data_set/savingsaccount.csv' USING PigStorage(',') as (customerid:chararray, savingsid:chararray, avgbalance:chararray);
+
+describe savingsaccount;
+illustrate savingsaccount;
+
+STORE savingsaccount INTO 'hbase://custmer360_amit' USING org.apache.pig.backend.hadoop.hbase.HBaseStorage(
+'savings:savingsid
+ savings:avgbalance'
+);
+
+HBASE____
+get 'custmer360_amit','CID-426125'
+scan 'custmer360_amit',{LIMIT=>10} 
+6666666666666666666666666666666666666666666666666666
+credttrxty
+6666666666666666666666666666666666666666666666666666
+creditcardtrx = LOAD '/user/biadmin/data_set/creditcardtrx.csv' USING PigStorage(',') as (customerid:chararray, trxamount:int, trxdate:chararray, trxtype:chararray);
+describe creditcardtrx;
+illustrate creditcardtrx;
+
+grouped = GROUP creditcardtrx by (customerid, trxtype);
+describe grouped;
+illustrate grouped;
+
+
+#Sum
+total = FOREACH grouped GENERATE group.customerid as customerid, group.trxtype as trxtype, SUM(creditcardtrx.trxamount) as salevalue;
+total = LIMIT total 100;
+describe total;
+illustrate total;
+
+
+#Distinct transaction types
+distincttrntype = FOREACH total GENERATE trxtype;
+distincttrntype = DISTINCT distincttrntype;
+dump distincttrntype;
+
+///////////////////////////////////////////
+//////////////
+
+#Filter
+food = FILTER total BY trxtype == ')Food';
+food = FOREACH food GENERATE customerid, salevalue;
+
+STORE food INTO 'custmer360_amit' USING org.apache.pig.backend.hadoop.hbase.HBaseStorage( 'credittrxsummary:food' );
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+HIVE
+000000000000
+0000000000000
+0000000000000000
+
+cd $HIVE_HOME/bin
+./hive shell
+
+
+create database custmer360_amit;
+use custmer360_amit;
+
+create external table accountsdept(id int, registrationdate date, age int, gender string, occupation string, income int, savingsid string, avgbalance int, loanid string, loantype string, santionedamount int, loantenure int, cardnumber string, credittype string, amountlimit int, deposittype string, deposittenure int) stored by'org.apache.hadoop.hive.hbase.HBaseStorageHandler' WITH SERDEPROPERTIES("hbase.columns.mapping" = ":key, demographics:registrationdate, demographics:age, demographics:gender, demographics:occupation, demographics:income, savings:savingsid, savings:avgbalance, loan:loanid, loan:type, loan:santionedamount, loan:tenure, credit:cardnumber, credit:type, credit:amountlimit, deposit:type, deposit:tenure") TBLPROPERTIES("hbase.table.name"="custmer360_amit");
+
+
+
+
+
+create external table reception(id string, registrationdate date, age int, gender string, occupation string, income int, savingsid string, loanid string, cardnumber string, deposittype string) stored by'org.apache.hadoop.hive.hbase.HBaseStorageHandler' WITH SERDEPROPERTIES("hbase.columns.mapping" = ":key, demographics:registrationdate, demographics:age, demographics:gender, demographics:occupation, demographics:income, savings:savingsid, loan:loanid, credit:cardnumber, deposit:type") TBLPROPERTIES("hbase.table.name"="custmer360_amit");
+
+
+select count(*) from reception where deposittype is not null;
+
+create external table finance(id int, savingsid string, loanid string, cardnumber string, type string, income int, avgbalance int, santionedamount int, amountlimit int)
+stored by'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+WITH SERDEPROPERTIES("hbase.columns.mapping" = ":key, savings:savingsid, loan:loanid, credit:cardnumber, deposit:type, demographics:income, savings:avgbalance, loan:santionedamount, credit:amountlimit")
+TBLPROPERTIES("hbase.table.name"="custmer360_amit");
+
+
+create external table if not exists loandept(id int, savingsid string, avgbalance int, loanid string, type string, santionedamount int, tenure int)
+stored by'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+WITH SERDEPROPERTIES("hbase.columns.mapping" = ":key, savings:savingsid, savings:avgbalance, loan:loanid, loan:type, loan:santionedamount, loan:tenure")
+TBLPROPERTIES("hbase.table.name"="custmer360_amit");
+
+
+DESCRIBE EXTENTEDED accountsdept;
+
+SELECT * FROM accountsdept LIMIT 5;
+
+
+EXPLAIN SELECT * FROM accountsdept;
+
+Select * from loandept where type = ‘Vehicle’;
+select count(*) from loandept where avgbalance is not null;
+
+

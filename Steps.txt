@@ -1,0 +1,8 @@
+
+load data into hdfs with winscp
+create table in mysql, and load data into tables
+using sqoop copy tables to hdfs
+
+
+
+
